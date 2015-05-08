@@ -9,6 +9,7 @@ using namespace std;
 
 
 const unsigned int countOfBits = 32;
+const long long unsigned int BASE = 4294967296;
 const char chHex[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
 
@@ -21,6 +22,7 @@ bool inputTest(string val);
 
 class BigInt
 {
+
     vector <unsigned int> digits;
     unsigned int length;
     bool sign; //false for positive, true for negative. 0 is positive
@@ -34,18 +36,18 @@ public:
         length = 0;
         sign = false;
     }
-    BigInt(int digit)
+    BigInt(unsigned int digit)
     {
-        if(digit >= 0){
+        //if(digit >= 0){
             digits.push_back(digit);
             length = 1;
-            sign = 0;
-        }
-        else{
-            digits.push_back(-1*digit);
-            length = 1;
-            sign = 1;
-        }
+            sign = false;
+        //}
+        //else{
+          //  digits.push_back(-1*digit);
+           // length = 1;
+           // sign = 1;
+        //}
     }
     BigInt(const BigInt &a)
     {
@@ -101,6 +103,11 @@ public:
             digits.push_back(strtoul(chHex, NULL, 16));
         }
         this->length = digits.size();
+         while(this->digits[this->digits.size()-1] == 0 && this->digits.size() != 1)
+        {
+            this->digits.pop_back();
+            this->length--;
+        }
         /*
         for(int i = 0; i<digits.size(); i++)
             cout<<digits[i]<<endl;
@@ -111,11 +118,64 @@ public:
     vector<unsigned int> getDigits();
     unsigned int getSign();
 
+    void concVector(vector <unsigned int> value, unsigned int direction)// direction == 0 then vector+BigInt.digits
+    {
+        this->digits.reserve(this->digits.size() + value.size());
+        this->length += value.size();
+            if(direction == 0)
+            {
+                this->digits.insert(this->digits.end(), value.begin(), value.end());
+            }
+            else
+            {
+                this->digits.insert(this->digits.begin(), value.begin(), value.end());
+            }
+    }
+
+    void setZero()//need tests
+    {
+        this->sign = false;
+        this->length = 1;
+        this->digits.push_back(0);
+    }
+
+    void setOne()//need tests
+    {
+        this->sign = false;
+        this->length = 1;
+        this->digits.push_back(1);
+    }
+
+    BigInt split(unsigned int spliter, unsigned int part)//need tests!!!
+    {
+        BigInt res;
+        if(spliter > (this->length)){
+            cout<<"Split Error: spliter > length!!"<<endl;
+            res.setZero();
+            return res;
+        }
+        res.sign = this->sign;
+        if(part == 0){
+            res.digits.reserve(spliter);
+            res.digits.insert(res.digits.end(),this->digits.begin(), this->digits.begin() + spliter);
+        }
+        else{
+            res.digits.reserve(this->length - spliter);
+            res.digits.insert(res.digits.end(),this->digits.begin() + spliter, this->digits.end());
+        }
+        res.length = res.digits.size();
+        return res;
+    }
 
     string toString();
 
     friend BigInt operator + (const BigInt &a, const BigInt &b);
-    friend BigInt operator - (const BigInt &a, const BigInt &b); //not implement
+    friend BigInt operator - (const BigInt &a, const BigInt &b);
+    friend BigInt operator * (const BigInt &u, const BigInt &v);
+    friend BigInt operator / (const BigInt &u, const BigInt &v);
+    friend BigInt Div(const BigInt &u, const BigInt &v);
+    friend BigInt Mul(const BigInt &u, const BigInt &v);
+    friend BigInt Mul(const BigInt &u, const unsigned int v);// Unsigned int mul
 
     friend BigInt operator-(const BigInt& a);
     friend bool operator == (const BigInt &a, const BigInt &b);
@@ -125,21 +185,29 @@ public:
     friend bool operator >= (const BigInt &a, const BigInt &b);
     friend bool operator <= (const BigInt &a, const BigInt &b);
     friend ostream& operator << (ostream &out, BigInt &b);
+    friend BigInt concBigInt(const BigInt& hi, const BigInt& lo);
+
 };
-
-
-
+void testSpecialNumber();
+void testOdnoRozryadResult();
+void testDivToOneRozryad(); // test div to one rozryad
+void testDivRevToMult();
+void testDiv(); // test for div
+void testSimpleMulHexAndInt(); // mul BigInt and Int
+void testKarazuba512(); // test for length >512bit
+void testKarazuba(); // karazuba :)
+void testSimpleMul();   // C = Mul(A,B)
 void testBigIntConstruct(); //BigInt( bigint : &BigInt ) // a = b
 void testUnarySub();		//unary "-"
 void testIntConstruct(); //BigInt( digit : int )
-void testMoreAndEq();		//operation ">="
-void testLessAndEq();		//operation "<="
-void testMore();		//operation ">"
-void testLess();		//operation "<"
-void testNotEqual(); //operation "!="
-void testEqual();   //operation "=="
-void testSum();     //operation "+"
-void testSub();     //operation "-"
+void testMoreAndEq();	//	operation ">="
+void testLessAndEq();	//	operation "<="
+void testMore();		// operation ">"
+void testLess();		// operation "<"
+void testNotEqual(); // operation "!="
+void testEqual();   // operation "=="
+void testSum();     // operation "+"
+void testSub();     // operation "-"
 
 #endif // HEADER_H
 

@@ -1,4 +1,4 @@
-#include <header.h>
+#include "header.h"
 
 
 unsigned int BigInt::getLenght()
@@ -59,6 +59,11 @@ BigInt operator + (const BigInt &a, const BigInt &b)
             res = right - (-left);
         }
     }
+    while(res.digits[res.digits.size() - 1] == 0 && res.digits.size() != 1)
+    {
+        res.digits.pop_back();
+        res.length--;
+    }
     return res;
 }
 
@@ -99,64 +104,352 @@ BigInt operator - (const BigInt &a, const BigInt &b)
         res.sign = false;
     else
         res.sign = true;
+
+    while(res.digits[res.digits.size() - 1] == 0 && res.digits.size() != 1)
+    {
+        res.digits.pop_back();
+        res.length--;
+    }
     return res;
-    //Одинаковые знаки
-//    unsigned int size = max(a.length,b.length);
-//    bool bothSign = a.sign;
-//    unsigned int flag = 0;
-//    if(a >= b){
-//        flag = 0;
-//        res.sign = false;//?
-//    }
-//    else{
-//        flag = 1;
-//        res.sign = true;//?
-//    }
+}
 
-    //Делаем вычитание от большего по модулю меньшее по модулю
-//    if(bothSign == false && flag == 0) //|| (bothSign == true && flag == 1)){
-//    {
-//        left = a;
-//        right = b;
-//    }
-    //+++++++++++
-//    if(bothSign == true && flag == 1){
-//        left = a;
-//        right = b;
-//    }
-    //?+
-//    if((bothSign == false && flag == 1) || (bothSign == true && flag == 0)){
-//        left = b;
-//        right = a;
-//    }
-    /*if(bothSign == true)
-        left.sign = right.sign = false;*/
+BigInt Mul(const BigInt &u, const unsigned int v)// Unsigned int mul
+{
+    BigInt w;
+    if((u.digits[0] == 0 && u.length == 1) ||(v == 0)){
+        w.setZero();
+        return w;
+    }
+    unsigned int rest = 0,
+                 m = u.length;
+    long long unsigned int temp = 0;
 
-//    for(int i = 0; i < size - right.length; i++)
-//        right.digits.push_back(0);
+    w.length = u.length + 1;
+    w.sign = u.sign;
 
-//    unsigned int rest = 0, counter = 0, mask = 0xFFFFFFFF;
-//    long long int temp = 0;
-//    for(int i = 0; i < left.length; i++)
-//    {
-//        temp = (long long int)left.digits[i] - right.digits[i] - rest;
-//        res.digits.push_back(temp);
-//        if(temp < 0)
-//            rest = 1;
-//        /*rest = temp >> 63;
-//        if(rest == 1)
-//            res.digits.push_back((temp^mask));
-//        else
-//           res.digits.push_back(temp);*/
-//        if(temp != 0)
-//            counter = i;
-//    }
-    // Обрезание
-    //res.length = counter + 1;
-//    for(int i = 0; i < (size - 1) - counter; i++)
-//        res.digits.pop_back();
-//    res.length = res.digits.size();
-//    return res;
+    for(int i = 0; i < w.length; i++)
+        w.digits.push_back(0);
+
+    for(int i = 0; i < m; i++){
+        temp = (long long unsigned int) u.digits[i] * v + rest;
+        w.digits[i] = temp;
+        rest = temp >> 32;
+    }
+
+    if(rest != 0){
+        w.digits[u.length] = rest;
+    }
+    else{
+        w.digits.pop_back();
+        w.length = w.length - 1;
+    }
+    while(w.digits[w.digits.size() - 1] == 0 && w.digits.size() != 1)
+    {
+        w.digits.pop_back();
+        w.length--;
+    }
+    return w;
+}
+
+BigInt Div(const BigInt &u, const BigInt &v)
+{
+   if(v.length != 1)
+       return u/v;
+   vector <unsigned int> value(u.length,0);
+   BigInt w;
+   w.concVector(value,0);
+   w.sign = u.sign ^ v.sign;
+   unsigned int r = 0;
+   int j = u.length - 1;
+
+   while(j>=0)
+   {
+       w.digits[j] = (r * BASE + u.digits[j]) / v.digits[0];
+       r = (r * BASE + u.digits[j]) % v.digits[0];
+       j--;
+   }
+   while(w.digits[w.digits.size()-1] == 0 && w.digits.size() != 1)
+   {
+       w.digits.pop_back();
+       w.length--;
+   }
+   return w;
+}
+
+BigInt Mul(const BigInt &u, const BigInt &v)// need tests
+{
+    BigInt w;
+    if((u.digits[0] == 0 && u.length == 1) ||(v.digits[0] == 0 && v.length == 1)){
+        w.setZero();
+        return w;
+    }
+    unsigned int rest = 0, n = v.length, m = u.length;
+    long long unsigned int temp = 0;
+
+    w.length = u.length + v.length;
+    w.sign = u.sign ^ v.sign;
+    for(int i = 0; i < w.length; i++)
+        w.digits.push_back(0);
+    for(int j = 0; j < n; j++)
+    {
+        if(v.digits[j] == 0){
+            w.digits[j + u.length] = 0;
+            continue;
+        }
+        else{
+            rest = 0;
+            for(int i = 0; i < m; i++){
+                temp = (long long unsigned int) u.digits[i]*v.digits[j] + w.digits[i+j] + rest;
+                w.digits[i+j] = temp;
+                rest = temp >> 32;
+            }
+            w.digits[j + u.length] = rest;
+        }
+    }
+    while(w.digits[w.digits.size()-1] == 0 && w.digits.size() != 1)
+    {
+        w.digits.pop_back();
+        w.length--;
+    }
+
+    return w;
+}
+
+BigInt operator / (const BigInt &u, const BigInt &v)
+{
+    // Предпроверка деления на нуль
+
+    if(v == BigInt(0))
+    {
+        cout<<"Operator Div: Input Error(division on Zero)!!! "<<endl;
+        return BigInt(0);
+    }
+    BigInt Q;
+    Q.sign = u.sign ^ v.sign;
+    BigInt U = u,
+           V = v;
+    if(U.sign == true || V.sign == true){
+        V.sign = U.sign = false;
+    }
+        //Если U < V возвращаем нуль???
+    if((U == BigInt(0)) || U < V ){
+        return BigInt(0);
+    }
+    if(v.length == 1)
+        return Div(u,v);
+    //Нормализация
+    int m = U.length - V.length,
+        n = V.length;
+    vector<unsigned int> mZeros(m+1,0);
+    Q.concVector(mZeros,1);
+    long long unsigned int q = 0,
+                           r = 0,
+                           temp = 0,
+    d = BASE /(V.digits[n - 1] + 1);
+
+    if(d == 1){
+       U.digits.push_back(0);
+       U.length +=1;
+    }
+    else{
+       U = Mul(U,d);
+    }
+       V = Mul(V,d);
+
+    vector <unsigned int> nPlusOneZeros(n+1,0);
+    BigInt hiU,loU, bPowNplusOne;
+
+    bPowNplusOne =  BigInt(1);
+    bPowNplusOne.concVector(nPlusOneZeros,1);
+
+    unsigned int tempLenght;
+    int j = m;
+    bool flag = false;
+    if (U.length==j+n) {
+        U.digits.insert(U.digits.end(), 0);
+        U.length++;
+     }
+
+    BigInt tempU;
+    while(j >= 0)
+    {
+            //D3 шаг
+            temp = (long long unsigned int)U.digits[j + n] * BASE + U.digits[j + n - 1];
+            q = (long long unsigned int)temp / V.digits[n - 1];
+            r = (long long unsigned int)temp %  V.digits[n - 1];
+            //cout<<endl<<"j "<<j<<endl;
+            //cout<<"q "<<q<<endl;
+            //cout<<"r "<<r<<endl;
+            do
+            {
+
+                if((q == BASE) || ((long long unsigned int)q*V.digits[n - 2] > (long long unsigned int)BASE*r + U.digits[ j + n - 2])){
+                    q --;
+                    r += V.digits[n - 1];
+                }
+                else{
+                    break;
+                }
+
+            }
+            while(r < BASE);
+
+            //D4 шаг
+            loU = U.split(j,0);
+            hiU = U.split(j,1);
+            hiU = hiU - Mul(V,q);
+            //cout<<"hiU "<<hiU<<endl;
+            flag = false;
+
+            if(hiU.sign == true){
+                //cout<<"D4"<<hiU<<endl;
+                flag = true;
+                hiU = hiU + bPowNplusOne;
+
+            }
+            //D5 + D6 шаги
+            Q.digits[j] = q;
+
+            if(flag == true)
+            {
+                Q.digits[j]--;
+                tempLenght = hiU.length;
+                hiU = hiU + V;
+                if(tempLenght!= hiU.length){
+                    hiU.digits.pop_back();
+                    hiU.length -=1;
+                }
+            }
+            for(int i = 0; i<U.digits.size() - hiU.digits.size(); i++)
+                hiU.digits.push_back(0);
+            hiU.length = hiU.digits.size();
+            U = concBigInt(hiU,loU);
+            //cout<<endl<<"U "<<U<<endl;
+            j--;
+    }
+    while(Q.digits[Q.digits.size()-1] == 0 && Q.digits.size() != 1)
+    {
+        Q.digits.pop_back();
+        Q.length--;
+    }
+    return Q;
+}
+
+
+/*
+u0.digits.reserve(halfSize);
+v0.digits.reserve(halfSize);
+v1.digits.reserve(v.length - halfSize);
+u1.digits.reserve(u.length - halfSize);
+
+u0.digits.insert(u0.digits.end(),u.digits.begin(),u.digits.begin() + halfSize);
+v0.digits.insert(v0.digits.end(),v.digits.begin(),v.digits.begin() + halfSize);
+u1.digits.insert(u1.digits.end(),u.digits.begin()+halfSize,u.digits.end());
+v1.digits.insert(v1.digits.end(),v.digits.begin()+halfSize,v.digits.end());
+
+u0.length = u0.digits.size();
+u1.length = u1.digits.size();
+v0.length = v0.digits.size();
+v1.length = v1.digits.size();
+*/
+/*
+v1.digits.reserve(v.length - halfSize);
+v0.digits.insert(v0.digits.end(),v.digits.begin(),v.digits.begin() + halfSize);
+v1.digits.insert(v1.digits.end(),v.digits.begin() + halfSize,v.digits.end());
+v0.length = v0.digits.size();
+v1.length = v1.digits.size();
+*/
+/*
+u0.digits.reserve(halfSize);
+u1.digits.reserve(u.length - halfSize);
+u0.digits.insert(u0.digits.end(),u.digits.begin(),u.digits.begin() + halfSize);
+u1.digits.insert(u1.digits.end(),u.digits.begin() + halfSize,u.digits.end());
+u0.length = u0.digits.size();
+*/
+
+BigInt concBigInt(const BigInt& hi, const BigInt& lo)
+{
+    BigInt Res;
+    if(hi == BigInt(0))
+        return lo;
+    Res.length = hi.length + lo.length;
+    Res.digits.reserve(Res.length);
+    Res.digits.insert( Res.digits.end(), lo.digits.begin(), lo.digits.end());
+    Res.digits.insert( Res.digits.end(), hi.digits.begin(), hi.digits.end());
+    Res.sign = hi.sign;
+    return Res;
+}
+
+BigInt operator * (const BigInt &u, const BigInt &v)
+{
+    if(u.length < 2 && v.length < 2)
+    {
+        return Mul(u,v);
+    }
+    BigInt U = u, V = v, u0, v0, u1, v1, A, B ,C,Res;
+    bool sign = u.sign ^ v.sign;
+    //cout<<"sign "<<sign<<endl;
+    unsigned int size = max(u.length,v.length),
+                 flag = 0;
+    unsigned int halfSize = (size >> 1) + (size & 1);//?????
+    if(halfSize < u.length && halfSize < v.length)
+    {
+        u0 = U.split(halfSize,0);
+        u1 = U.split(halfSize,1);
+        v0 = V.split(halfSize,0);
+        v1 = V.split(halfSize,1);
+        A = u1*v1;
+        B = u0*v0;
+        C = ((u1+u0)*(v1+v0));
+        /*
+        A = Mul(u1,v1);
+        B = Mul(u0,v0);
+        C = Mul(u1+u0,v1+v0);
+        */
+    }
+    else
+    {
+        flag = 1;
+        if(u.length <= halfSize)
+        {
+            u0 = U;
+            v0 = V.split(halfSize,0);
+            v1 = V.split(halfSize,1);
+            //C = Mul(u0,v1+v0);
+            C = u0*(v1+v0);
+        }
+        else
+        {
+            v0 = V;
+            u0 = U.split(halfSize,0);
+            u1 = U.split(halfSize,1);
+            //C = Mul(u0+u1,v0);
+            C = (u0+u1)*v0;
+        }
+        //B = Mul(u0,v0);
+        B = u0*v0;
+    }
+    vector<unsigned int> halfSizeZeros(halfSize,0);
+    if(flag == 0) // A*b^2n +(C - A - B)*b^n + B
+    {
+        vector<unsigned int> twoHalfSizeZeros(2*halfSize,0);
+        Res = ((C - A) - B);
+        Res.concVector(halfSizeZeros,1);//?
+        A.concVector(twoHalfSizeZeros,1);
+        Res = Res + B + A;
+    }
+    else //(C - B)*b^n + B
+    {
+        Res = C - B;
+        Res.concVector(halfSizeZeros,1);
+        Res = Res + B;
+    }
+    while(Res.digits[Res.digits.size() - 1] == 0 && Res.digits.size() != 1)
+    {
+        Res.digits.pop_back();
+        Res.length--;
+    }
+    return Res;
 }
 
 BigInt operator-(const BigInt& a)
@@ -280,6 +573,9 @@ string BigInt::toString()
     reverse(hexString.begin(), hexString.end());
 
     hexString = clearZerosInFirstPos(hexString);
+
+
+
     //cout<<"hexString "<<hexString<<endl;
 
     if(this->sign == true)
@@ -394,6 +690,7 @@ vector <unsigned int> stringToVectorHex(string hex)
     return res;
 }
 */
+
 /*
 unsigned int getSizeToConvert(unsigned int hexSize)
 {
@@ -405,4 +702,5 @@ unsigned int getSizeToConvert(unsigned int hexSize)
     return size;
 }
 */
+
 
