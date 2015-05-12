@@ -176,13 +176,13 @@ BigInt Div(const BigInt &u, const BigInt &v)
    return w;
 }
 
-BigInt Mul(const BigInt &u, const BigInt &v)// need tests
+BigInt Mul(const BigInt &u, const BigInt &v)
 {
     BigInt w;
-    if((u.digits[0] == 0 && u.length == 1) ||(v.digits[0] == 0 && v.length == 1)){
-        w.setZero();
-        return w;
-    }
+    if(u == BigInt(0) || v == BigInt(0))//((u.digits[0] == 0 && u.length == 1) ||(v.digits[0] == 0 && v.length == 1))
+        return BigInt(0);
+    if(v.length == 1)
+        return Mul(u,v.digits[0]);
     unsigned int rest = 0, n = v.length, m = u.length;
     long long unsigned int temp = 0;
 
@@ -214,11 +214,242 @@ BigInt Mul(const BigInt &u, const BigInt &v)// need tests
 
     return w;
 }
+vector<BigInt> knutDivision(const BigInt &u, const BigInt &v)// first div,second mod
+{
+    vector<BigInt> vecRes;
+    // Предпроверка деления на нуль
+    if(v == BigInt(0))
+    {
+        cout<<"knutDivision: Input Error(division on Zero)!!! "<<endl;
+        vecRes.push_back(BigInt(0));
+        vecRes.push_back(BigInt(0));
+        return vecRes;
+    }
+    BigInt Q;
+    Q.sign = u.sign ^ v.sign;
+    BigInt U = u,
+           V = v;
+    if(U.sign == true || V.sign == true){
+        V.sign = U.sign = false;
+    }
+        //Если U < V возвращаем нуль???
+    if((U == BigInt(0)) || U < V ){
+        vecRes.push_back(BigInt(0));
+        U.sign = Q.sign;
+        vecRes.push_back(U);
+        return vecRes;
+    }
+    if(v.length == 1)
+    {
+        BigInt div = Div(U,V);
+        BigInt mod = U - (V*div);
+        div.sign = Q.sign;
+        vecRes.push_back(div);
+        if(div.sign == true)
+            mod = mod + V;
+        vecRes.push_back(mod);
+        return vecRes;
+    }
+    //Нормализация
+    int m = U.length - V.length,
+        n = V.length;
+    vector<unsigned int> mZeros(m+1,0);
+    Q.concVector(mZeros,1);
+    long long unsigned int q = 0,
+                           r = 0,
+                           temp = 0,
+    d = BASE /(V.digits[n - 1] + 1);
+
+    if(d == 1){
+       U.digits.push_back(0);
+       U.length +=1;
+    }
+    else{
+       U = Mul(U,d);
+    }
+       V = Mul(V,d);
+
+    vector <unsigned int> nPlusOneZeros(n+1,0);
+    BigInt hiU,loU, bPowNplusOne;
+
+    bPowNplusOne =  BigInt(1);
+    bPowNplusOne.concVector(nPlusOneZeros,1);
+
+    unsigned int tempLenght;
+    int j = m;
+    bool flag = false;
+    if (U.length==j+n) {
+        U.digits.insert(U.digits.end(), 0);
+        U.length++;
+     }
+
+    while(j >= 0)
+    {
+            //D3 шаг
+            temp = (long long unsigned int)U.digits[j + n] * BASE + U.digits[j + n - 1];
+            q = (long long unsigned int)temp / V.digits[n - 1];
+            r = (long long unsigned int)temp %  V.digits[n - 1];
+            do
+            {
+
+                if((q == BASE) || ((long long unsigned int)q*V.digits[n - 2] > (long long unsigned int)BASE*r + U.digits[ j + n - 2])){
+                    q --;
+                    r += V.digits[n - 1];
+                }
+                else{
+                    break;
+                }
+
+            }
+            while(r < BASE);
+            //D4 шаг
+            loU = U.split(j,0);
+            hiU = U.split(j,1);
+            hiU = hiU - Mul(V,q);
+            flag = false;
+
+            if(hiU.sign == true){
+                flag = true;
+                hiU = hiU + bPowNplusOne;
+
+            }
+            //D5 + D6 шаги
+            Q.digits[j] = q;
+            if(flag == true)
+            {
+                Q.digits[j]--;
+                tempLenght = hiU.length;
+                hiU = hiU + V;
+                if(tempLenght!= hiU.length){
+                    hiU.digits.pop_back();
+                    hiU.length -=1;
+                }
+            }
+            for(int i = 0; i<U.digits.size() - hiU.digits.size(); i++)
+                hiU.digits.push_back(0);
+            hiU.length = hiU.digits.size();
+            U = concBigInt(hiU,loU);
+            j--;
+    }
+    while(Q.digits[Q.digits.size()-1] == 0 && Q.digits.size() != 1)
+    {
+        Q.digits.pop_back();
+        Q.length--;
+    }
+    vecRes.push_back(Q);
+    vecRes.push_back(Div(U,BigInt(d)));
+    return vecRes;
+}
 
 BigInt operator / (const BigInt &u, const BigInt &v)
 {
-    // Предпроверка деления на нуль
+    vector<BigInt> Res = knutDivision(u,v);
+    return Res[0];
+}
 
+BigInt operator % (const BigInt &u, const BigInt &v)
+{
+    vector<BigInt> Res = knutDivision(u,v);
+    return Res[1];
+}
+
+BigInt findMu(const BigInt &mod)
+{
+    BigInt bPowTwoK(1);
+    unsigned int k = mod.length;
+    vector<unsigned int> twoKzeros(2*k,0);
+    bPowTwoK.concVector(twoKzeros,1);
+    return bPowTwoK/mod;
+}
+
+BigInt modBarret(const BigInt &x, const BigInt &m,const BigInt &mu)
+{
+
+    unsigned int k = m.length,
+                 n = x.length;
+    if(x == BigInt(0))
+        return BigInt(0);
+    if(m == BigInt(0)){
+        cout<<"modBarret Error: Zero modul!!!"<<endl;
+        return BigInt(0);
+    }
+    if(m.sign == true){
+        cout<<"modBarret Error: Negative modul!!!"<<endl;
+        return BigInt(0);
+    }
+    if(n > 2*k){
+        return x%m;
+    }
+    BigInt  X = x,
+            M = m;
+    if(x.sign == true)
+        X.sign = false;
+    if(X < M)
+    {
+        if(x.sign == false)
+            return X;
+        else
+            return M - X;
+    }
+
+    BigInt  q1 = X.split(k-1,1);
+    BigInt  r1 = X.split(k+1,0);
+    q1 = q1 * mu;
+    q1 = q1.split(k+1,1);
+
+    BigInt bPowKpusOne(1);
+    vector<unsigned int> kPusOneZeros(k+1,0);
+    bPowKpusOne.concVector(kPusOneZeros,1);
+
+    BigInt r;
+    BigInt r2 = q1*M;
+    r2 = r2.split(k+1,0);
+    if(r1 >= r2)
+        r = r1 - r2;
+    else
+        r = bPowKpusOne + r1 - r2;
+
+    while(r >= M)
+        r = r - M;
+
+    if(x.sign == false)
+        return r;
+    else
+        return M - r;
+}
+
+BigInt Pow(const BigInt &x, const BigInt &exp, const BigInt &m)
+{
+    BigInt mu = findMu(m),
+           X = x,
+           res(1);
+    unsigned int bit;
+    for(int i = 0; i < exp.digits.size(); i++)
+    {
+        for(int j = 0; j < countOfBits; j++)
+        {
+            bit = (exp.digits[i] >> j) & 1;
+            if(bit!=0){
+                res = modBarret( res*X, m, mu);
+                //res = (res*X)%m;
+            }
+            //X = (X*X)%m;
+            X = modBarret( X*X, m, mu);
+        }
+    }
+
+    //temp1 = exp.digits[exp.digits.size()-1];
+    //while(temp!=0)werqwerqwertwetwetwert
+    //{
+    //    bit = temp1 & 1;
+    //}
+    return res;
+}
+
+/*
+BigInt operator / (const BigInt &u, const BigInt &v)
+{
+    // Предпроверка деления на нуль
     if(v == BigInt(0))
     {
         cout<<"Operator Div: Input Error(division on Zero)!!! "<<endl;
@@ -334,7 +565,7 @@ BigInt operator / (const BigInt &u, const BigInt &v)
     }
     return Q;
 }
-
+*/
 
 /*
 u0.digits.reserve(halfSize);
@@ -382,7 +613,7 @@ BigInt concBigInt(const BigInt& hi, const BigInt& lo)
 
 BigInt operator * (const BigInt &u, const BigInt &v)
 {
-    if(u.length < 2 && v.length < 2)
+    if(u.length < 10 && v.length < 10)
     {
         return Mul(u,v);
     }

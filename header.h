@@ -150,9 +150,10 @@ public:
     {
         BigInt res;
         if(spliter > (this->length)){
-            cout<<"Split Error: spliter > length!!"<<endl;
-            res.setZero();
-            return res;
+            //cout<<"Split Error: spliter > length!!"<<endl;
+            //res.setZero();
+            //return res;
+            return *this;
         }
         res.sign = this->sign;
         if(part == 0){
@@ -172,10 +173,16 @@ public:
     friend BigInt operator + (const BigInt &a, const BigInt &b);
     friend BigInt operator - (const BigInt &a, const BigInt &b);
     friend BigInt operator * (const BigInt &u, const BigInt &v);
+
+    friend BigInt Pow(const BigInt &x, const BigInt &exp,const BigInt &m);
+    friend BigInt modBarret(const BigInt &x, const BigInt &m,const BigInt &mu);//need tests
+    friend BigInt findMu(const BigInt &mod);//need tests
+    friend BigInt operator % (const BigInt &u, const BigInt &v);
     friend BigInt operator / (const BigInt &u, const BigInt &v);
+    friend vector<BigInt> knutDivision(const BigInt &u, const BigInt &v);// first div,second mod
     friend BigInt Div(const BigInt &u, const BigInt &v);
     friend BigInt Mul(const BigInt &u, const BigInt &v);
-    friend BigInt Mul(const BigInt &u, const unsigned int v);// Unsigned int mul
+    friend BigInt Mul(const BigInt &u, const unsigned int v);
 
     friend BigInt operator-(const BigInt& a);
     friend bool operator == (const BigInt &a, const BigInt &b);
@@ -188,6 +195,13 @@ public:
     friend BigInt concBigInt(const BigInt& hi, const BigInt& lo);
 
 };
+vector<unsigned int> BBS(const BigInt &seed,const BigInt &p,const BigInt &q, unsigned int count);
+
+//    Tests
+void testFerma();
+void testFindMu();
+void testXEXPModM();
+void testModRed();
 void testSpecialNumber();
 void testOdnoRozryadResult();
 void testDivToOneRozryad(); // test div to one rozryad
